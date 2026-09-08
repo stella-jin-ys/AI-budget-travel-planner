@@ -19,6 +19,8 @@ const urlRequire = 'require("url")';
 const cryptoRequire = 'require("crypto")';
 const vmRequire = 'require("vm")';
 const streamRequire = 'require("stream")';
+const httpRequire = 'require("http")';
+const httpsRequire = 'require("https")';
 const cloudflareFs = "__cloudflareFs";
 const cloudflarePath = "__cloudflarePath";
 const cloudflareOs = "__cloudflareOs";
@@ -26,8 +28,10 @@ const cloudflareUrl = "__cloudflareUrl";
 const cloudflareCrypto = "__cloudflareCrypto";
 const cloudflareVm = "__cloudflareVm";
 const cloudflareStream = "__cloudflareStream";
+const cloudflareHttp = "__cloudflareHttp";
+const cloudflareHttps = "__cloudflareHttps";
 const cloudflareNodeImports =
-  'import * as __cloudflarePath from "node:path";\nimport * as __cloudflareUrl from "node:url";\nimport * as __cloudflareCrypto from "node:crypto";\nimport * as __cloudflareStream from "node:stream";\nconst __cloudflareFs = { existsSync: () => false, readFileSync: () => "", mkdirSync: () => {}, writeFileSync: () => {}, promises: { readFile: async () => "", writeFile: async () => {}, mkdir: async () => {}, stat: async () => ({}) } };\nconst __cloudflareOs = { cpus: () => [{}] };\nconst __cloudflareVm = {};\n';
+  'import * as __cloudflarePath from "node:path";\nimport * as __cloudflareUrl from "node:url";\nimport * as __cloudflareCrypto from "node:crypto";\nimport * as __cloudflareStream from "node:stream";\nconst __cloudflareFs = { existsSync: () => false, readFileSync: () => "", mkdirSync: () => {}, writeFileSync: () => {}, promises: { readFile: async () => "", writeFile: async () => {}, mkdir: async () => {}, stat: async () => ({}) } };\nconst __cloudflareOs = { cpus: () => [{}] };\nconst __cloudflareVm = {};\nconst __cloudflareHttp = { Agent: class {} };\nconst __cloudflareHttps = { Agent: class {} };\n';
 
 export function stripNextDevConsoleFileImport(worker) {
   let patched = worker
@@ -45,7 +49,9 @@ export function stripNextDevConsoleFileImport(worker) {
     patched.includes(urlRequire) ||
     patched.includes(cryptoRequire) ||
     patched.includes(vmRequire) ||
-    patched.includes(streamRequire)
+    patched.includes(streamRequire) ||
+    patched.includes(httpRequire) ||
+    patched.includes(httpsRequire)
   ) {
     patched = patched
       .replaceAll(fsRequire, cloudflareFs)
@@ -54,7 +60,9 @@ export function stripNextDevConsoleFileImport(worker) {
       .replaceAll(urlRequire, cloudflareUrl)
       .replaceAll(cryptoRequire, cloudflareCrypto)
       .replaceAll(vmRequire, cloudflareVm)
-      .replaceAll(streamRequire, cloudflareStream);
+      .replaceAll(streamRequire, cloudflareStream)
+      .replaceAll(httpRequire, cloudflareHttp)
+      .replaceAll(httpsRequire, cloudflareHttps);
 
     if (!patched.startsWith(cloudflareNodeImports)) {
       patched = `${cloudflareNodeImports}${patched}`;
@@ -81,6 +89,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     cryptoRequire,
     vmRequire,
     streamRequire,
+    httpRequire,
+    httpsRequire,
   ].some((hook) => worker.includes(hook));
 
   if (!hasPatchTarget) {
