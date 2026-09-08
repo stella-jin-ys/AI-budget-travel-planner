@@ -50,22 +50,17 @@ describe("SectionTabs", () => {
 });
 
 describe("ManualShell", () => {
-  it("renders a compact mobile header with a back action and no duplicated total", async () => {
-    const onBack = vi.fn();
-    const user = userEvent.setup();
+  it("does not render a duplicate mobile header below the navigation", () => {
     const state = createWorkspace(makeTripPlan());
     render(
       <ManualShell
         state={state}
-        chat={<p>Conversation</p>}
         leaf={<h1>Trip overview</h1>}
-        onBack={onBack}
       />,
     );
 
-    expect(screen.getByRole("banner", { name: "Mobile trip summary" })).not.toHaveTextContent("Total cost");
-    await user.click(screen.getByRole("button", { name: "Edit brief" }));
-    expect(onBack).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("banner", { name: "Mobile trip summary" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit brief" })).not.toBeInTheDocument();
   });
 
   it("keeps the mobile status summary readable without a tab rail", () => {
@@ -73,7 +68,6 @@ describe("ManualShell", () => {
     render(
       <ManualShell
         state={state}
-        chat={<p>Conversation</p>}
         leaf={<h1>Trip overview</h1>}
       />,
     );
@@ -87,15 +81,14 @@ describe("ManualShell", () => {
     render(
       <ManualShell
         state={state}
-        chat={<p>Conversation</p>}
         leaf={<h1>Trip overview</h1>}
       />,
     );
 
     expect(screen.getByRole("main", { name: "Spendwise AI trip workspace" })).toBeVisible();
-    expect(screen.getByRole("complementary", { name: "Trip conversation" })).toBeVisible();
+    expect(screen.queryByRole("complementary", { name: "Trip conversation" })).not.toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Trip plan" })).toBeVisible();
-    expect(screen.getByText("Conversation")).toBeVisible();
+    expect(screen.queryByText("Conversation")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Trip status")).not.toBeInTheDocument();
   });
 
@@ -111,7 +104,6 @@ describe("ManualShell", () => {
           ...state,
           readiness: { state: "draft", issues: [blockingIssue] },
         }}
-        chat={<p>Conversation</p>}
         leaf={<h1>Trip overview</h1>}
       />,
     );
@@ -131,7 +123,6 @@ describe("ManualShell", () => {
             perPerson: { amount: "0.10", currency: "CHF" },
           },
         }}
-        chat={<p>Conversation</p>}
         leaf={<h1>Trip overview</h1>}
       />,
     );
@@ -144,7 +135,6 @@ describe("ManualShell", () => {
     render(
       <ManualShell
         state={state}
-        chat={<p>Conversation</p>}
         leaf={<h1>Trip overview</h1>}
       />,
     );

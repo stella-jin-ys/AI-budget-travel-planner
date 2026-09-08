@@ -23,9 +23,9 @@ describe("LaunchScreen", () => {
     render(<LaunchScreen onStart={onStart} />);
 
     expect(screen.getByRole("heading", { name: /travel further.*without overspending/i })).toBeVisible();
-    expect(screen.getByRole("img", { name: "Spendwise Trip logo" })).toHaveAttribute("src", expect.stringContaining("spendwise-butterfly-logo-icon-transparent.png"));
-    expect(screen.getByRole("img", { name: "Spendwise Trip logo" })).toHaveAttribute("sizes", "24px");
-    expect(screen.getByText("Spendwise", { selector: ".spendwise-logo__name" })).toBeVisible();
+    expect(screen.getByRole("img", { name: "Budget Trip logo" })).toHaveAttribute("src", expect.stringContaining("spendwise-butterfly-logo-icon-transparent.png"));
+    expect(screen.getByRole("img", { name: "Budget Trip logo" })).toHaveAttribute("sizes", "24px");
+    expect(screen.getByText("Budget", { selector: ".spendwise-logo__name" })).toBeVisible();
     expect(screen.getByText("TRIP", { selector: ".spendwise-logo__trip" })).toBeVisible();
     expect(screen.getByText("Tell us where you’re starting, who’s coming, and what matters most.")).toBeVisible();
     expect(screen.getByRole("list", { name: "How it works" })).toBeVisible();

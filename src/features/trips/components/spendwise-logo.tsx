@@ -8,10 +8,10 @@ export function spendwiseLogoSrc(basePath: string) {
 
 export function SpendwiseLogo({ compact = false }: { compact?: boolean }) {
   return (
-    <span className={`spendwise-logo${compact ? " spendwise-logo--compact" : ""}`} aria-label="Spendwise Trip">
-      <Image className="spendwise-logo__image" src={spendwiseLogoSrc(process.env.NEXT_PUBLIC_BASE_PATH ?? "")} alt="Spendwise Trip logo" width={110} height={110} sizes="24px" priority />
+    <span className={`spendwise-logo${compact ? " spendwise-logo--compact" : ""}`} aria-label="Budget Trip">
+      <Image className="spendwise-logo__image" src={spendwiseLogoSrc(process.env.NEXT_PUBLIC_BASE_PATH ?? "")} alt="Budget Trip logo" width={110} height={110} sizes="24px" priority />
       <span className="spendwise-logo__type">
-        <span className="spendwise-logo__name">Spendwise</span>
+        <span className="spendwise-logo__name">Budget</span>
         <span className="spendwise-logo__trip">TRIP</span>
       </span>
     </span>

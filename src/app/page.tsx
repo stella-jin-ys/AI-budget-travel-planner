@@ -8,6 +8,7 @@ import { AuthDialog } from "@/features/trips/components/auth-dialog";
 import { AIPlanError } from "@/features/trips/components/ai-plan-error";
 import type { TripBrief, TripPlan } from "@/features/trips/domain/trip";
 import { AITripProvider } from "@/features/trips/providers/ai-provider";
+import { buildSwitzerlandFamilyTrip } from "@/features/trips/fixtures/switzerland-family";
 
 export default function Home() {
   const [plan, setPlan] = useState<TripPlan | undefined>();
@@ -81,6 +82,12 @@ export default function Home() {
     setError(undefined);
   }
 
+  function openDemoPlan() {
+    setError(undefined);
+    setStarted(false);
+    setPlan(buildSwitzerlandFamilyTrip());
+  }
+
   const navigation = {
     userEmail,
     onRequestAuth: () => setAuthOpen(true),
@@ -93,7 +100,7 @@ export default function Home() {
     content = <AIPlanError message={error} onRetry={() => buildPlan(brief)} onEditBrief={() => { setError(undefined); setSetupStep(3); }} navigation={navigation} />;
   } else if (!plan) {
     content = !started
-      ? <LaunchScreen onStart={requestStart} navigation={navigation} />
+      ? <LaunchScreen onStart={requestStart} onDemo={openDemoPlan} navigation={navigation} />
       : <GuidedTripSetup onSubmit={buildPlan} busy={busy} navigation={navigation} initialStep={setupStep} initialBrief={brief} />;
   } else {
     content = (

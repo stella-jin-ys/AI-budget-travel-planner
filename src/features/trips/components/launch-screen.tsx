@@ -1,6 +1,6 @@
 import { AppNav, type AppNavProps } from "./app-nav";
 
-export function LaunchScreen({ onStart, navigation }: { onStart: () => void; navigation?: AppNavProps }) {
+export function LaunchScreen({ onStart, onDemo, navigation }: { onStart: () => void; onDemo?: () => void; navigation?: AppNavProps }) {
   return (
     <main className="launch-screen" aria-labelledby="launch-title">
       <div className="launch-screen__image" aria-hidden="true" />
@@ -10,6 +10,7 @@ export function LaunchScreen({ onStart, navigation }: { onStart: () => void; nav
         <h1 id="launch-title">Travel further<br /><em>without overspending.</em></h1>
         <p>Tell us where you’re starting, who’s coming, and what matters most.</p>
         <button type="button" className="launch-cta" onClick={onStart}>Start planning <span aria-hidden="true">↗</span></button>
+        {onDemo ? <button type="button" className="launch-cta launch-demo" onClick={onDemo}>View demo trip <span aria-hidden="true">↗</span></button> : null}
         <p className="launch-card__note">One request · Your brief stays saved</p>
       </section>
       <ol className="launch-steps" aria-label="How it works">

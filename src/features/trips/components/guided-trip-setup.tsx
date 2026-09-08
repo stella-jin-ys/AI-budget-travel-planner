@@ -25,6 +25,7 @@ export function GuidedTripSetup({ onSubmit, busy = false, navigation, initialSte
   const [endDate, setEndDate] = useState(initialBrief?.endDate ?? today());
   const [adults, setAdults] = useState(initialBrief?.travelers.filter((traveler) => !traveler.eligibility.includes("child")).length || 1);
   const [childAges, setChildAges] = useState<number[]>(initialBrief?.travelers.filter((traveler) => traveler.eligibility.includes("child")).map((traveler) => traveler.age) ?? []);
+  const [currency, setCurrency] = useState(initialBrief?.budget?.currency ?? initialBrief?.currency ?? "SEK");
   const [budget, setBudget] = useState(initialBrief?.budget?.amount ?? "0");
   const [priority, setPriority] = useState<Priority>(initialBrief?.spendingPreference ?? "balanced");
   const [accommodationType, setAccommodationType] = useState<NonNullable<TripBrief["accommodationType"]>>(initialBrief?.accommodationType ?? "hotel");
@@ -69,14 +70,14 @@ export function GuidedTripSetup({ onSubmit, busy = false, navigation, initialSte
         })),
       ],
       interests: priority === "activities" ? ["activities"] : [],
-      currency: "SEK",
+      currency,
       purpose: priority === "activities" ? "activities" : undefined,
-      budget: budget ? money(budget, "SEK") : undefined,
+      budget: budget ? money(budget, currency) : undefined,
       budgetMode: "total",
       spendingPreference: priority,
       transitTolerance,
       accommodationType,
-      strictBudget: budget ? money(budget, "SEK") : undefined,
+      strictBudget: budget ? money(budget, currency) : undefined,
     };
   }
 
@@ -99,16 +100,16 @@ export function GuidedTripSetup({ onSubmit, busy = false, navigation, initialSte
             <label><span>Destination <small>(optional)</small></span><input aria-label="Destination" value={destination} onChange={(event) => setDestination(event.target.value)} placeholder="France, Ski in the Alps…" /></label>
           </div>
           <div className="guided-fields guided-fields--dates">
-            <label><span>Start date</span><input aria-label="Start date" type="date" value={startDate} placeholder={today()} onChange={(event) => setStartDate(event.target.value)} /></label>
-            <label><span>End date</span><input aria-label="End date" type="date" value={endDate} placeholder={today()} onChange={(event) => setEndDate(event.target.value)} /></label>
+            <label><span>Start date</span><input aria-label="Start date" type="date" value={startDate} placeholder={today()} onChange={(event) => { const nextStartDate = event.target.value; setStartDate(nextStartDate); if (nextStartDate && endDate < nextStartDate) setEndDate(nextStartDate); }} /></label>
+            <label><span>End date</span><input aria-label="End date" type="date" min={startDate || undefined} value={endDate} placeholder={today()} onChange={(event) => setEndDate(event.target.value)} /></label>
           </div>
         </Page> : null}
 
         {step === 1 ? <Page title="Who’s coming?" copy="We’ll use this to find fares and stays that fit everyone.">
           <div className="traveler-row"><span>Adults</span><div className="stepper"><button type="button" aria-label="Remove adult" onClick={() => setAdults(Math.max(1, adults - 1))}>−</button><strong>{adults}</strong><button type="button" aria-label="Add adult" onClick={() => setAdults(adults + 1)}>+</button></div></div>
           <div className="traveler-row"><span>Children</span><button type="button" className="ghost-action" onClick={addChild}>Add a child <span aria-hidden="true">+</span></button></div>
-          {childAges.map((age, index) => <div className="child-age-row" key={index}><label className="child-age-field"><span>Child {index + 1} age</span><input aria-label={`Child ${index + 1} age`} type="number" min="0" max="17" value={age} onChange={(event) => setChildAges((current) => current.map((value, childIndex) => childIndex === index ? Number(event.target.value) : value))} /></label><button type="button" className="child-remove-action" aria-label={`Remove child ${index + 1}`} onClick={() => removeChild(index)}>Remove</button></div>)}
-          <label className="budget-field"><span>Total trip budget <small>SEK</small></span><input aria-label="Budget" type="number" inputMode="decimal" value={budget} onFocus={() => { if (budget === "0") setBudget(""); }} onBlur={() => { if (!budget) setBudget("0"); }} onChange={(event) => setBudget(event.target.value)} placeholder="0" /></label>
+          <div className="child-age-list">{childAges.map((age, index) => <div className="child-age-row" key={index}><label className="child-age-field"><span>Child {index + 1} age</span><input aria-label={`Child ${index + 1} age`} type="number" min="0" max="17" value={age} onChange={(event) => setChildAges((current) => current.map((value, childIndex) => childIndex === index ? Number(event.target.value) : value))} /></label><button type="button" className="child-remove-action" aria-label={`Remove child ${index + 1}`} onClick={() => removeChild(index)}>×</button></div>)}</div>
+          <label className="budget-field"><span>Total trip budget</span><div className="budget-field__controls"><input aria-label="Budget" type="number" inputMode="decimal" value={budget} onFocus={() => { if (!budget || Number(budget) === 0) setBudget(""); }} onBlur={() => { if (!budget) setBudget("0"); }} onChange={(event) => setBudget(event.target.value)} placeholder="0" /><select aria-label="Currency" value={currency} onChange={(event) => setCurrency(event.target.value)}><option value="CHF">CHF · Swiss franc</option><option value="EUR">EUR · Euro</option><option value="GBP">GBP · Pound sterling</option><option value="SEK">SEK · Swedish krona</option></select></div></label>
         </Page> : null}
 
         {step === 2 ? <Page title="What matters most?" copy="Your priority helps us make the right trade-offs for your budget.">
@@ -118,7 +119,7 @@ export function GuidedTripSetup({ onSubmit, busy = false, navigation, initialSte
         </Page> : null}
 
         {step === 3 ? <Page title="Your trip, in the making." copy="Review your choices before opening the saved travel plan.">
-          <dl className="trip-review"><div><dt>Destination</dt><dd>{origin} → {destination || "Flexible destination"}</dd></div><div><dt>Dates</dt><dd>{startDate} – {endDate}</dd></div><div><dt>Travelers</dt><dd>{adults} adult{adults === 1 ? "" : "s"}{childAges.length ? ` · ${childAges.length} child` : ""}</dd></div><div><dt>Budget</dt><dd>{budget ? `${Number(budget).toLocaleString("sv-SE")} SEK` : "Flexible"}</dd></div><div><dt>Priority</dt><dd>{priority === "balanced" ? "Balanced spending" : priority[0].toUpperCase() + priority.slice(1)}</dd></div></dl>
+          <dl className="trip-review"><div><dt>Destination</dt><dd>{origin} → {destination || "Flexible destination"}</dd></div><div><dt>Dates</dt><dd>{startDate} – {endDate}</dd></div><div><dt>Travelers</dt><dd>{adults} adult{adults === 1 ? "" : "s"}{childAges.length ? ` · ${childAges.length} child` : ""}</dd></div><div><dt>Budget</dt><dd>{budget ? `${Number(budget).toLocaleString("sv-SE")} ${currency}` : "Flexible"}</dd></div><div><dt>Priority</dt><dd>{priority === "balanced" ? "Balanced spending" : priority[0].toUpperCase() + priority.slice(1)}</dd></div></dl>
           <p className="guided-demo-note">Spendwise will make one AI request and validate the result before building your plan.</p>
         </Page> : null}
 

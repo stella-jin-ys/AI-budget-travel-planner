@@ -1,5 +1,11 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { maxDuration, POST } from "@/app/api/plan/route";
+
+const { collectTripSourcesMock } = vi.hoisted(() => ({ collectTripSourcesMock: vi.fn() }));
+
+vi.mock("@/features/trips/sources/collect", () => ({
+  collectTripSources: collectTripSourcesMock,
+}));
 
 const supabaseInsert = vi.fn().mockResolvedValue({ error: null });
 vi.mock("@supabase/supabase-js", () => ({
@@ -18,8 +24,35 @@ function tripRequest() {
       travelers: [{ id: "adult-1", name: "Adult", age: 35, eligibility: ["adult"] }],
       interests: ["activities"],
       currency: "SEK",
+      budget: { amount: "12000.00", currency: "SEK" },
+      spendingPreference: "activities",
     }),
   });
+}
+
+function sourceSnapshot() {
+  return {
+    brief: {},
+    checkedAt: "2026-09-08T10:00:00.000Z",
+    providers: [
+      { id: "amadeus", status: "recent" },
+      { id: "tictactrip", status: "unavailable", message: "Tictactrip credentials are not configured" },
+    ],
+    transport: [{
+      id: "sncf",
+      kind: "transport",
+      supplierName: "SNCF Connect",
+      currency: "SEK",
+      total: "2450.00",
+      sourceUrl: "https://www.sncf-connect.com/",
+      checkedAt: "2026-09-08T10:00:00.000Z",
+      status: "recent",
+      travelerIds: ["adult-1"],
+    }],
+    stays: [],
+    places: [],
+    localTransport: [],
+  };
 }
 
 function groundedPlan() {
@@ -78,6 +111,11 @@ afterEach(() => {
   delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   supabaseInsert.mockReset();
   supabaseInsert.mockResolvedValue({ error: null });
+  collectTripSourcesMock.mockReset();
+});
+
+beforeEach(() => {
+  collectTripSourcesMock.mockResolvedValue(sourceSnapshot());
 });
 
 describe("POST /api/plan", () => {
@@ -99,7 +137,7 @@ describe("POST /api/plan", () => {
 
     expect(response.status).toBe(503);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(String(fetchMock.mock.calls[0][0])).toBe("https://generativelanguage.googleapis.com/v1beta/interactions");
+    expect(String(fetchMock.mock.calls[0][0])).toBe("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent");
   });
 
   it("makes one capability-filtered OpenRouter free-router request when Gemini is not configured", async () => {
@@ -121,6 +159,22 @@ describe("POST /api/plan", () => {
     expect(requestBody.model).toBe("openrouter/free");
     expect(requestBody.max_tokens).toBe(4500);
     expect(requestBody.provider).toEqual({ require_parameters: true });
+    expect(requestBody.response_format).toEqual({
+      type: "json_schema",
+      json_schema: {
+        name: "travel_plan",
+        strict: true,
+        schema: expect.objectContaining({
+          type: "object",
+          properties: expect.objectContaining({
+            title: expect.objectContaining({ type: "string" }),
+            items: expect.objectContaining({ type: "array" }),
+            days: expect.objectContaining({ type: "array" }),
+          }),
+          required: expect.arrayContaining(["title", "currency", "items", "days", "completeSections", "contingencyRate"]),
+        }),
+      },
+    });
   });
 
   it("uses configured OpenRouter as the single provider when Gemini is also configured", async () => {
@@ -161,7 +215,50 @@ describe("POST /api/plan", () => {
     }));
   });
 
-  it("grounds one Gemini request and preserves validated details without exposing the raw response", async () => {
+  it("retries malformed or empty OpenRouter content without parsing reasoning", async () => {
+    process.env.OPENROUTER_API_KEY = "openrouter-test-key";
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: "", reasoning: '{"title":"draft"' } }] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: JSON.stringify(groundedPlan()) } }] }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await POST(tripRequest());
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not heuristically repair malformed OpenRouter JSON", async () => {
+    process.env.OPENROUTER_API_KEY = "openrouter-test-key";
+    const malformedPlan = `${JSON.stringify(groundedPlan()).slice(0, -1)},}`;
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: malformedPlan } }] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: JSON.stringify(groundedPlan()) } }] }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await POST(tripRequest());
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("grounds Gemini generateContent in a collected source snapshot without exposing raw provider data", async () => {
     process.env.GEMINI_API_KEY = "gemini-test-key";
     process.env.SUPABASE_URL = "https://example.supabase.co";
     process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-test-key";
@@ -169,8 +266,8 @@ describe("POST /api/plan", () => {
       ok: true,
       status: 200,
       json: async () => ({
-        model: "gemini-3.7-flash",
-        steps: [{ type: "model_output", content: [{ type: "text", text: JSON.stringify(groundedPlan()) }] }],
+        modelVersion: "gemini-3.7-flash",
+        candidates: [{ content: { parts: [{ text: JSON.stringify(groundedPlan()) }] } }],
       }),
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -181,14 +278,64 @@ describe("POST /api/plan", () => {
 
     expect(response.status).toBe(200);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(requestBody.model).toBe("gemini-3.7-flash");
-    expect(requestBody.tools).toEqual([{ type: "google_search" }]);
-    expect(requestBody.response_format.mime_type).toBe("application/json");
+    expect(collectTripSourcesMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0][0])).toBe("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent");
+    expect(requestBody.contents).toEqual([{ role: "user", parts: [{ text: expect.any(String) }] }]);
+    expect(requestBody.generationConfig).toEqual(expect.objectContaining({
+      responseMimeType: "application/json",
+      responseJsonSchema: expect.any(Object),
+    }));
+    const prompt = requestBody.contents[0].parts[0].text;
+    expect(prompt).toContain("Lund");
+    expect(prompt).toContain("2027-02-20");
+    expect(prompt).toContain("adult-1");
+    expect(prompt).toContain("activities");
+    expect(prompt).toContain("12000.00");
+    expect(prompt).toContain("sncf");
+    expect(prompt).toContain("2450.00");
+    expect(prompt).toContain("https://www.sncf-connect.com/");
+    expect(prompt).toContain("tictactrip");
+    expect(prompt).toContain("unavailable");
+    expect(prompt).toContain("credentials are not configured");
     expect(result.plan.items[0].alternatives[0]).toEqual(expect.objectContaining({
       details: [{ label: "Departure", value: "Lund Central 07:15" }, { label: "Arrival", value: "Paris Gare du Nord 21:05" }],
       links: [{ label: "Book with SNCF Connect", url: "https://www.sncf-connect.com/" }],
     }));
     expect(result).not.toHaveProperty("raw");
+    expect(result.providers).toEqual([
+      { id: "amadeus", status: "recent" },
+      { id: "tictactrip", status: "unavailable" },
+    ]);
+    expect(supabaseInsert).toHaveBeenCalledWith(expect.objectContaining({
+      source_snapshot: expect.objectContaining({
+        checkedAt: "2026-09-08T10:00:00.000Z",
+        providers: expect.arrayContaining([expect.objectContaining({ id: "amadeus" })]),
+      }),
+    }));
+  });
+
+  it("retries a Gemini plan whose selected source ID is absent from the snapshot", async () => {
+    process.env.GEMINI_API_KEY = "gemini-test-key";
+    const ungroundedPlan = groundedPlan();
+    ungroundedPlan.items[0].selectedAlternativeId = "unknown-source";
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ candidates: [{ content: { parts: [{ text: JSON.stringify(ungroundedPlan) }] } }] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ candidates: [{ content: { parts: [{ text: JSON.stringify(groundedPlan()) }] } }] }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await POST(tripRequest());
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(collectTripSourcesMock).toHaveBeenCalledTimes(1);
   });
 
   it("returns a valid AI plan when configured persistence fails", async () => {
@@ -200,8 +347,8 @@ describe("POST /api/plan", () => {
       ok: true,
       status: 200,
       json: async () => ({
-        model: "gemini-3.7-flash",
-        steps: [{ type: "model_output", content: [{ type: "text", text: JSON.stringify(groundedPlan()) }] }],
+        modelVersion: "gemini-3.7-flash",
+        candidates: [{ content: { parts: [{ text: JSON.stringify(groundedPlan()) }] } }],
       }),
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -222,8 +369,8 @@ describe("POST /api/plan", () => {
       ok: true,
       status: 200,
       json: async () => ({
-        model: "gemini-3.7-flash",
-        steps: [{ type: "model_output", content: [{ type: "text", text: JSON.stringify(groundedPlan()) }] }],
+        modelVersion: "gemini-3.7-flash",
+        candidates: [{ content: { parts: [{ text: JSON.stringify(groundedPlan()) }] } }],
       }),
     });
     vi.stubGlobal("fetch", fetchMock);

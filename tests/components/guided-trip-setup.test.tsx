@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GuidedTripSetup } from "@/features/trips/components/guided-trip-setup";
@@ -20,6 +20,7 @@ describe("GuidedTripSetup", () => {
     render(<GuidedTripSetup onSubmit={vi.fn()} initialStep={1} />);
     expect(screen.getByRole("spinbutton", { name: "Budget" })).toHaveValue(0);
     expect(screen.getByRole("spinbutton", { name: "Budget" })).toHaveAttribute("placeholder", "0");
+    expect(screen.getByRole("combobox", { name: "Currency" })).toHaveValue("SEK");
   });
 
   it("clears the zero budget on focus and restores it when left empty", async () => {
@@ -32,6 +33,17 @@ describe("GuidedTripSetup", () => {
 
     await user.tab();
     expect(budget).toHaveValue(0);
+  });
+
+  it("keeps the end date on or after the selected start date", () => {
+    render(<GuidedTripSetup onSubmit={vi.fn()} />);
+
+    const startDate = screen.getByLabelText("Start date");
+    const endDate = screen.getByLabelText("End date");
+    fireEvent.change(startDate, { target: { value: "2026-09-10" } });
+
+    expect(endDate).toHaveAttribute("min", "2026-09-10");
+    expect(endDate).toHaveValue("2026-09-10");
   });
 
   it("removes a child and keeps the remaining child age", async () => {
@@ -66,6 +78,7 @@ describe("GuidedTripSetup", () => {
     await user.clear(screen.getByLabelText("Child 1 age"));
     await user.type(screen.getByLabelText("Child 1 age"), "10");
     await user.type(screen.getByRole("spinbutton", { name: "Budget" }), "16000");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Currency" }), "EUR");
     await user.click(screen.getByRole("button", { name: "Next: priorities" }));
 
     expect(screen.getByRole("heading", { name: "What matters most?" })).toBeVisible();
@@ -82,8 +95,8 @@ describe("GuidedTripSetup", () => {
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
       origin: "Lund",
       destination: "France",
-      currency: "SEK",
-      budget: { amount: "16000.00", currency: "SEK" },
+      currency: "EUR",
+      budget: { amount: "16000.00", currency: "EUR" },
       spendingPreference: "activities",
       travelers: expect.arrayContaining([
         expect.objectContaining({ name: "Adult" }),

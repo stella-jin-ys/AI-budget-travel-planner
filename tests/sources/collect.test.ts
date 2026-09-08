@@ -30,8 +30,10 @@ describe("collectTripSources", () => {
     expect(snapshot.transport[0]).toMatchObject({ id: "amadeus-flight-flight-1" });
     expect(snapshot.providers).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: "amadeus", status: "live" }),
-      expect.objectContaining({ id: "tictactrip", status: "failed" }),
+      expect.objectContaining({ id: "tictactrip", status: "failed", message: "Source provider timed out" }),
     ]));
+    expect(snapshot.checkedAt).toEqual(expect.any(String));
+    expect(hangingTictactripSignal?.aborted).toBe(true);
   });
 
   it("returns explicit unavailable statuses without credentials", async () => {
@@ -65,8 +67,15 @@ describe("collectTripSources", () => {
   });
 });
 
-async function successfulAmadeusAndHangingTictactrip(url: string | URL): Promise<Response> {
-  if (String(url).includes("tictactrip")) return new Promise(() => undefined);
+let hangingTictactripSignal: AbortSignal | undefined;
+
+async function successfulAmadeusAndHangingTictactrip(url: string | URL, init?: RequestInit): Promise<Response> {
+  if (String(url).includes("tictactrip")) {
+    hangingTictactripSignal = init?.signal ?? undefined;
+    return new Promise((_, reject) => {
+      hangingTictactripSignal?.addEventListener("abort", () => reject(hangingTictactripSignal?.reason), { once: true });
+    });
+  }
   return amadeusResponse(url);
 }
 

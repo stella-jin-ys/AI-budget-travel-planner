@@ -26,6 +26,21 @@ async function reachReview(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("planner access", () => {
+  it("opens the seeded demo travel plan without calling the AI provider", async () => {
+    const user = userEvent.setup();
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    render(<Home />);
+
+    await user.click(screen.getByRole("button", { name: "View demo trip" }));
+
+    expect(screen.getByRole("main", { name: "Spendwise AI trip workspace" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: /Basel to Bernese Oberland travel plan/i })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Transportation" }));
+    expect(screen.getByText("Basel to Interlaken rail schedule")).toBeVisible();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("resets the page scroll when authentication opens the input pages", async () => {
     const user = userEvent.setup();
     render(<Home />);

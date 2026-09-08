@@ -17,7 +17,7 @@ export function AppNav({ userEmail, onRequestAuth, onSignOut, onHome, context }:
   return (
     <nav className="app-nav" aria-label="Primary navigation">
       <div className="app-nav__row">
-        <button type="button" className="app-nav__brand" aria-label="Spendwise Trip home" onClick={onHome}>
+        <button type="button" className="app-nav__brand" aria-label="Budget Trip home" onClick={onHome}>
           <SpendwiseLogo />
         </button>
         <div className="app-nav__actions">

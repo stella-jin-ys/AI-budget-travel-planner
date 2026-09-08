@@ -20,6 +20,10 @@ describe("TripWorkspace", () => {
     expect(screen.queryByRole("heading", { name: "Recommendations" })).not.toBeInTheDocument();
     expect(screen.queryByText("Origin · Basel")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Basel to Bernese Oberland travel plan" })).toBeVisible();
+    expect(screen.getByRole("region", { name: "Trip plan summary" })).toHaveClass("trip-plan-summary-card");
+    expect(screen.getByRole("img", { name: "Trip budget breakdown" })).toBeVisible();
+    expect(within(screen.getByRole("list", { name: "Budget categories" })).getByText("Transportation")).toBeVisible();
+    expect(screen.getByText("Daily allowance")).toBeVisible();
     expect(overviewTrigger).toHaveAttribute("aria-expanded", "true");
     expect(within(overviewCard!).getByText("Trip brief")).toBeVisible();
     expect(within(overviewCard!).getByText("Total cost")).toBeVisible();
@@ -121,6 +125,24 @@ describe("TripWorkspace", () => {
     }
   });
 
+  it("shows a provider warning reason alongside unavailable source evidence", async () => {
+    const user = userEvent.setup();
+    const plan = buildSwitzerlandFamilyTrip();
+    const transport = plan.items.find((item) => item.section === "travel");
+    transport!.alternatives[0].evidence = {
+      ...transport!.alternatives[0].evidence,
+      status: "unavailable",
+      reason: "Amadeus credentials are not configured",
+      synthetic: false,
+    };
+
+    render(<TripWorkspace initialPlan={plan} />);
+    const trigger = screen.getByRole("button", { name: "Transportation" });
+    await user.click(trigger);
+
+    expect(within(trigger.closest("article")!).getByText("Amadeus credentials are not configured")).toBeVisible();
+  });
+
   it("keeps expanded plan details without lock and replace actions", async () => {
     const user = userEvent.setup();
     render(<TripWorkspace initialPlan={buildSwitzerlandFamilyTrip()} />);
@@ -180,7 +202,7 @@ describe("trip route", () => {
 
     await fillGuidedBrief(user, "Basel", "Interlaken");
 
-    await user.click(within(screen.getByRole("complementary", { name: "Trip conversation" })).getByRole("button", { name: "Edit brief" }));
+    await user.click(screen.getAllByRole("button", { name: "Edit brief" }).at(-1)!);
     expect(screen.getByRole("heading", { name: "Your trip, in the making." })).toBeVisible();
     expect(screen.getByText("4 / 4")).toBeVisible();
   });

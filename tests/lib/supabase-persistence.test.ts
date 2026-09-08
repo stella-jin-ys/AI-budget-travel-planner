@@ -48,7 +48,9 @@ describe("persistTripPlan", () => {
     const { persistTripPlan } = await import("@/lib/supabase/persistence");
 
     await expect(persistTripPlan(brief, plan)).resolves.toBe(true);
-    expect(insert).toHaveBeenCalledWith(expect.objectContaining({ brief, plan, created_at: expect.any(String) }));
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({ brief, plan, source_snapshot: null, created_at: expect.any(String) }),
+    );
   });
 
   it("stores a source snapshot when one is provided", async () => {

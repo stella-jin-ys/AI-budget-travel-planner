@@ -19,10 +19,7 @@ export interface ProviderStatus {
   message?: string;
 }
 
-export type CollectedTripSourceSnapshot = TripSourceSnapshot & {
-  checkedAt: string;
-  providers: ProviderStatus[];
-};
+export type CollectedTripSourceSnapshot = TripSourceSnapshot;
 
 export interface CollectTripSourcesOptions {
   timeoutMs?: number;
@@ -38,21 +35,21 @@ interface ProviderResult {
 
 interface ProviderJob {
   id: string;
-  collect: (brief: TripBrief) => Promise<ProviderResult>;
+  collect: (brief: TripBrief, signal: AbortSignal) => Promise<ProviderResult>;
 }
 
 export function providerRegistry(fetcher: Fetcher = globalThis.fetch): ProviderJob[] {
   return [
     {
       id: "amadeus",
-      async collect(brief) {
+      async collect(brief, signal) {
         if (!process.env.AMADEUS_CLIENT_ID || !process.env.AMADEUS_CLIENT_SECRET) {
           return unavailable("amadeus", "Amadeus credentials are not configured");
         }
 
         const [flights, hotels] = await Promise.all([
-          searchAmadeusFlights(brief, fetcher),
-          searchAmadeusHotels(brief, fetcher),
+          searchAmadeusFlights(brief, fetcher, signal),
+          searchAmadeusHotels(brief, fetcher, signal),
         ]);
         return {
           provider: combinedStatus("amadeus", [flights, hotels]),
@@ -63,23 +60,23 @@ export function providerRegistry(fetcher: Fetcher = globalThis.fetch): ProviderJ
     },
     {
       id: "tictactrip",
-      async collect(brief) {
+      async collect(brief, signal) {
         if (!process.env.TICTACTRIP_API_TOKEN) {
           return unavailable("tictactrip", "Tictactrip credentials are not configured");
         }
 
-        const transport = await searchTictactrip(brief, fetcher);
+        const transport = await searchTictactrip(brief, fetcher, signal);
         return { provider: resultStatus("tictactrip", transport), transport };
       },
     },
     {
       id: placesProviderId(),
-      async collect(brief) {
+      async collect(brief, signal) {
         if (!process.env.GOOGLE_PLACES_API_KEY && !process.env.FOURSQUARE_API_KEY) {
           return unavailable("places", "Places credentials are not configured");
         }
 
-        const places = await searchPlaces(brief, fetcher);
+        const places = await searchPlaces(brief, fetcher, signal);
         return { provider: resultStatus(placesProviderId(), places), places };
       },
     },
@@ -93,7 +90,7 @@ export async function collectTripSources(
   const timeoutMs = options.timeoutMs ?? Number(process.env.SOURCE_TIMEOUT_MS ?? 8000);
   const jobs = providerRegistry();
   const results = await Promise.allSettled(
-    jobs.map(async (job) => withTimeout(job.collect(brief), timeoutMs)),
+    jobs.map(async (job) => withTimeout((signal) => job.collect(brief, signal), timeoutMs)),
   );
   const successful = results.flatMap((result, index) =>
     result.status === "fulfilled"
@@ -124,10 +121,10 @@ function choose<T extends SourceTransportOption | SourceStayOption | SourcePlace
   return selected ? [selected] : [];
 }
 
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+function withTimeout<T>(collect: (signal: AbortSignal) => Promise<T>, timeoutMs: number): Promise<T> {
   const signal = AbortSignal.timeout(timeoutMs);
   return Promise.race([
-    promise,
+    collect(signal),
     new Promise<T>((_, reject) => {
       signal.addEventListener("abort", () => reject(new Error("Source provider timed out")), { once: true });
     }),
