@@ -17,13 +17,15 @@ const pathRequire = 'require("path")';
 const osRequire = 'require("os")';
 const urlRequire = 'require("url")';
 const cryptoRequire = 'require("crypto")';
+const vmRequire = 'require("vm")';
 const cloudflareFs = "__cloudflareFs";
 const cloudflarePath = "__cloudflarePath";
 const cloudflareOs = "__cloudflareOs";
 const cloudflareUrl = "__cloudflareUrl";
 const cloudflareCrypto = "__cloudflareCrypto";
+const cloudflareVm = "__cloudflareVm";
 const cloudflareNodeImports =
-  'import * as __cloudflarePath from "node:path";\nimport * as __cloudflareUrl from "node:url";\nimport * as __cloudflareCrypto from "node:crypto";\nconst __cloudflareFs = { existsSync: () => false, readFileSync: () => "", mkdirSync: () => {}, writeFileSync: () => {}, promises: { readFile: async () => "", writeFile: async () => {}, mkdir: async () => {}, stat: async () => ({}) } };\nconst __cloudflareOs = { cpus: () => [{}] };\n';
+  'import * as __cloudflarePath from "node:path";\nimport * as __cloudflareUrl from "node:url";\nimport * as __cloudflareCrypto from "node:crypto";\nconst __cloudflareFs = { existsSync: () => false, readFileSync: () => "", mkdirSync: () => {}, writeFileSync: () => {}, promises: { readFile: async () => "", writeFile: async () => {}, mkdir: async () => {}, stat: async () => ({}) } };\nconst __cloudflareOs = { cpus: () => [{}] };\nconst __cloudflareVm = {};\n';
 
 export function stripNextDevConsoleFileImport(worker) {
   let patched = worker
@@ -39,14 +41,16 @@ export function stripNextDevConsoleFileImport(worker) {
     patched.includes(pathRequire) ||
     patched.includes(osRequire) ||
     patched.includes(urlRequire) ||
-    patched.includes(cryptoRequire)
+    patched.includes(cryptoRequire) ||
+    patched.includes(vmRequire)
   ) {
     patched = patched
       .replaceAll(fsRequire, cloudflareFs)
       .replaceAll(pathRequire, cloudflarePath)
       .replaceAll(osRequire, cloudflareOs)
       .replaceAll(urlRequire, cloudflareUrl)
-      .replaceAll(cryptoRequire, cloudflareCrypto);
+      .replaceAll(cryptoRequire, cloudflareCrypto)
+      .replaceAll(vmRequire, cloudflareVm);
 
     if (!patched.startsWith(cloudflareNodeImports)) {
       patched = `${cloudflareNodeImports}${patched}`;
@@ -71,6 +75,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     osRequire,
     urlRequire,
     cryptoRequire,
+    vmRequire,
   ].some((hook) => worker.includes(hook));
 
   if (!hasPatchTarget) {
