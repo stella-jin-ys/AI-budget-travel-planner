@@ -24,6 +24,12 @@ describe("Cloudflare worker production patch", () => {
     );
   });
 
+  it("removes Next's Node require hook bootstrap", () => {
+    expect(stripNextDevConsoleFileImport("require_require_hook()")).toBe(
+      "void 0 /* Removed Next Node require hook for Cloudflare Workers. */",
+    );
+  });
+
   it("shims the fast setImmediate export without loading Node timers", () => {
     const worker = "require_fast_set_immediate_external()}});let timers=require_fast_set_immediate_external();";
 
@@ -32,11 +38,21 @@ describe("Cloudflare worker production patch", () => {
     );
   });
 
+  it("uses the stream compatibility shim for webpack external modules", () => {
+    expect(stripNextDevConsoleFileImport('e2.exports=require("node:stream")')).toContain(
+      "e2.exports=__cloudflareStreamCompat",
+    );
+  });
+
   it("rewrites raw Node fs and path imports for the Worker runtime", () => {
     const worker = 'var fs=require("fs"),path=require("path"),nodePath=require("node:path"),os=require("os"),url=require("url"),crypto=require("crypto"),vm=require("vm"),stream=require("stream"),streamWeb=require("node:stream/web"),http=require("http"),https=require("https");';
 
-    expect(stripNextDevConsoleFileImport(worker)).toBe(
-      'import * as __cloudflarePath from "node:path";\nimport * as __cloudflareUrl from "node:url";\nimport * as __cloudflareCrypto from "node:crypto";\nimport * as __cloudflareStream from "node:stream";\nconst __cloudflareFs = { existsSync: () => false, readFileSync: () => "", mkdirSync: () => {}, writeFileSync: () => {}, promises: { readFile: async () => "", writeFile: async () => {}, mkdir: async () => {}, stat: async () => ({}) } };\nconst __cloudflareOs = { cpus: () => [{}] };\nconst __cloudflareVm = {};\nconst __cloudflareStreamWeb = { ReadableStream };\nconst __cloudflareHttp = { Agent: class {} };\nconst __cloudflareHttps = { Agent: class {} };\nvar fs=__cloudflareFs,path=__cloudflarePath,nodePath=__cloudflarePath,os=__cloudflareOs,url=__cloudflareUrl,crypto=__cloudflareCrypto,vm=__cloudflareVm,stream=__cloudflareStream,streamWeb=__cloudflareStreamWeb,http=__cloudflareHttp,https=__cloudflareHttps;',
+    const patched = stripNextDevConsoleFileImport(worker);
+
+    expect(patched).toContain('const __cloudflareStreamWeb = { ReadableStream };');
+    expect(patched).toContain('const require = __cloudflareNodeRequire;');
+    expect(patched).toContain(
+      'var fs=__cloudflareFs,path=__cloudflarePath,nodePath=__cloudflarePath,os=__cloudflareOs,url=__cloudflareUrl,crypto=__cloudflareCrypto,vm=__cloudflareVm,stream=__cloudflareStream,streamWeb=__cloudflareStreamWeb,http=__cloudflareHttp,https=__cloudflareHttps;',
     );
   });
 
