@@ -18,6 +18,12 @@ describe("Cloudflare worker production patch", () => {
     );
   });
 
+  it("removes Next's Node crypto patch bootstrap", () => {
+    expect(stripNextDevConsoleFileImport("require_node_crypto();")).toBe(
+      "/* Removed Next Node crypto patch for Cloudflare Workers. */",
+    );
+  });
+
   it("is idempotent", () => {
     const worker = "require_console_file();";
 
