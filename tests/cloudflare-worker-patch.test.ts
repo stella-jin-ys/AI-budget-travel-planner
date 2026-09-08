@@ -24,6 +24,14 @@ describe("Cloudflare worker production patch", () => {
     );
   });
 
+  it("shims the fast setImmediate export without loading Node timers", () => {
+    const worker = "require_fast_set_immediate_external()}});let timers=require_fast_set_immediate_external();";
+
+    expect(stripNextDevConsoleFileImport(worker)).toBe(
+      "/* Removed Next fast setImmediate patch for Cloudflare Workers. */}});let timers=({ unpatchedSetImmediate: (callback) => setTimeout(callback, 0) });;",
+    );
+  });
+
   it("is idempotent", () => {
     const worker = "require_console_file();";
 
