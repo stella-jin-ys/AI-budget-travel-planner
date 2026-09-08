@@ -11,6 +11,7 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     ".open-next/**",
+    "dist/**",
     "build/**",
     "next-env.d.ts",
     // Ignore generated artifacts left by the pre-root local checkout.
