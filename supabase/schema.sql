@@ -2,6 +2,7 @@ create table if not exists public.trip_plans (
   id uuid primary key default gen_random_uuid(),
   brief jsonb not null,
   plan jsonb not null,
+  source_snapshot jsonb,
   created_at timestamptz not null default now()
 );
 
