@@ -33,10 +33,10 @@ describe("Cloudflare worker production patch", () => {
   });
 
   it("rewrites raw Node fs and path imports for the Worker runtime", () => {
-    const worker = 'var fs=require("fs"),path=require("path"),os=require("os");';
+    const worker = 'var fs=require("fs"),path=require("path"),os=require("os"),url=require("url");';
 
     expect(stripNextDevConsoleFileImport(worker)).toBe(
-      'import * as __cloudflarePath from "node:path";\nconst __cloudflareFs = { existsSync: () => false, readFileSync: () => "", mkdirSync: () => {}, writeFileSync: () => {}, promises: { readFile: async () => "", writeFile: async () => {}, mkdir: async () => {}, stat: async () => ({}) } };\nconst __cloudflareOs = { cpus: () => [{}] };\nvar fs=__cloudflareFs,path=__cloudflarePath,os=__cloudflareOs;',
+      'import * as __cloudflarePath from "node:path";\nimport * as __cloudflareUrl from "node:url";\nconst __cloudflareFs = { existsSync: () => false, readFileSync: () => "", mkdirSync: () => {}, writeFileSync: () => {}, promises: { readFile: async () => "", writeFile: async () => {}, mkdir: async () => {}, stat: async () => ({}) } };\nconst __cloudflareOs = { cpus: () => [{}] };\nvar fs=__cloudflareFs,path=__cloudflarePath,os=__cloudflareOs,url=__cloudflareUrl;',
     );
   });
 

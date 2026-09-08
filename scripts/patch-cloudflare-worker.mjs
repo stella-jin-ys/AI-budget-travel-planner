@@ -15,11 +15,13 @@ const fastSetImmediateShim = "({ unpatchedSetImmediate: (callback) => setTimeout
 const fsRequire = 'require("fs")';
 const pathRequire = 'require("path")';
 const osRequire = 'require("os")';
+const urlRequire = 'require("url")';
 const cloudflareFs = "__cloudflareFs";
 const cloudflarePath = "__cloudflarePath";
 const cloudflareOs = "__cloudflareOs";
+const cloudflareUrl = "__cloudflareUrl";
 const cloudflareNodeImports =
-  'import * as __cloudflarePath from "node:path";\nconst __cloudflareFs = { existsSync: () => false, readFileSync: () => "", mkdirSync: () => {}, writeFileSync: () => {}, promises: { readFile: async () => "", writeFile: async () => {}, mkdir: async () => {}, stat: async () => ({}) } };\nconst __cloudflareOs = { cpus: () => [{}] };\n';
+  'import * as __cloudflarePath from "node:path";\nimport * as __cloudflareUrl from "node:url";\nconst __cloudflareFs = { existsSync: () => false, readFileSync: () => "", mkdirSync: () => {}, writeFileSync: () => {}, promises: { readFile: async () => "", writeFile: async () => {}, mkdir: async () => {}, stat: async () => ({}) } };\nconst __cloudflareOs = { cpus: () => [{}] };\n';
 
 export function stripNextDevConsoleFileImport(worker) {
   let patched = worker
@@ -30,11 +32,17 @@ export function stripNextDevConsoleFileImport(worker) {
     .replace(fastSetImmediateImport, fastSetImmediateReplacement)
     .replace(fastSetImmediateImport, fastSetImmediateShim);
 
-  if (patched.includes(fsRequire) || patched.includes(pathRequire) || patched.includes(osRequire)) {
+  if (
+    patched.includes(fsRequire) ||
+    patched.includes(pathRequire) ||
+    patched.includes(osRequire) ||
+    patched.includes(urlRequire)
+  ) {
     patched = patched
       .replaceAll(fsRequire, cloudflareFs)
       .replaceAll(pathRequire, cloudflarePath)
-      .replaceAll(osRequire, cloudflareOs);
+      .replaceAll(osRequire, cloudflareOs)
+      .replaceAll(urlRequire, cloudflareUrl);
 
     if (!patched.startsWith(cloudflareNodeImports)) {
       patched = `${cloudflareNodeImports}${patched}`;
@@ -57,6 +65,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     fsRequire,
     pathRequire,
     osRequire,
+    urlRequire,
   ].some((hook) => worker.includes(hook));
 
   if (!hasPatchTarget) {
