@@ -20,6 +20,7 @@ const urlRequire = 'require("url")';
 const cryptoRequire = 'require("crypto")';
 const vmRequire = 'require("vm")';
 const streamRequire = 'require("stream")';
+const streamWebRequire = 'require("node:stream/web")';
 const httpRequire = 'require("http")';
 const httpsRequire = 'require("https")';
 const cloudflareFs = "__cloudflareFs";
@@ -29,10 +30,11 @@ const cloudflareUrl = "__cloudflareUrl";
 const cloudflareCrypto = "__cloudflareCrypto";
 const cloudflareVm = "__cloudflareVm";
 const cloudflareStream = "__cloudflareStream";
+const cloudflareStreamWeb = "__cloudflareStreamWeb";
 const cloudflareHttp = "__cloudflareHttp";
 const cloudflareHttps = "__cloudflareHttps";
 const cloudflareNodeImports =
-  'import * as __cloudflarePath from "node:path";\nimport * as __cloudflareUrl from "node:url";\nimport * as __cloudflareCrypto from "node:crypto";\nimport * as __cloudflareStream from "node:stream";\nconst __cloudflareFs = { existsSync: () => false, readFileSync: () => "", mkdirSync: () => {}, writeFileSync: () => {}, promises: { readFile: async () => "", writeFile: async () => {}, mkdir: async () => {}, stat: async () => ({}) } };\nconst __cloudflareOs = { cpus: () => [{}] };\nconst __cloudflareVm = {};\nconst __cloudflareHttp = { Agent: class {} };\nconst __cloudflareHttps = { Agent: class {} };\n';
+  'import * as __cloudflarePath from "node:path";\nimport * as __cloudflareUrl from "node:url";\nimport * as __cloudflareCrypto from "node:crypto";\nimport * as __cloudflareStream from "node:stream";\nconst __cloudflareFs = { existsSync: () => false, readFileSync: () => "", mkdirSync: () => {}, writeFileSync: () => {}, promises: { readFile: async () => "", writeFile: async () => {}, mkdir: async () => {}, stat: async () => ({}) } };\nconst __cloudflareOs = { cpus: () => [{}] };\nconst __cloudflareVm = {};\nconst __cloudflareStreamWeb = { ReadableStream };\nconst __cloudflareHttp = { Agent: class {} };\nconst __cloudflareHttps = { Agent: class {} };\n';
 
 export function stripNextDevConsoleFileImport(worker) {
   let patched = worker
@@ -52,6 +54,7 @@ export function stripNextDevConsoleFileImport(worker) {
     patched.includes(cryptoRequire) ||
     patched.includes(vmRequire) ||
     patched.includes(streamRequire) ||
+    patched.includes(streamWebRequire) ||
     patched.includes(httpRequire) ||
     patched.includes(httpsRequire)
   ) {
@@ -64,6 +67,7 @@ export function stripNextDevConsoleFileImport(worker) {
       .replaceAll(cryptoRequire, cloudflareCrypto)
       .replaceAll(vmRequire, cloudflareVm)
       .replaceAll(streamRequire, cloudflareStream)
+      .replaceAll(streamWebRequire, cloudflareStreamWeb)
       .replaceAll(httpRequire, cloudflareHttp)
       .replaceAll(httpsRequire, cloudflareHttps);
 
@@ -93,6 +97,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     cryptoRequire,
     vmRequire,
     streamRequire,
+    streamWebRequire,
     httpRequire,
     httpsRequire,
   ].some((hook) => worker.includes(hook));
