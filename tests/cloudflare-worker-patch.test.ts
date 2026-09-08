@@ -6,7 +6,15 @@ describe("Cloudflare worker production patch", () => {
     const worker = "require_node_environment();require_console_file();require_console_exit();";
 
     expect(stripNextDevConsoleFileImport(worker)).toBe(
-      "require_node_environment();/* Removed Next dev console file hook for Cloudflare Workers. */require_console_exit();",
+      "require_node_environment();/* Removed Next dev console hook for Cloudflare Workers. */require_console_exit();",
+    );
+  });
+
+  it("removes the Node-only console dimmer bootstrap", () => {
+    const worker = "require_console_dim_external();var dim=require_console_dim_external();";
+
+    expect(stripNextDevConsoleFileImport(worker)).toBe(
+      "/* Removed Next dev console dim hook for Cloudflare Workers. */var dim=({ setAbortedLogsStyle() {} });",
     );
   });
 
@@ -14,7 +22,7 @@ describe("Cloudflare worker production patch", () => {
     const worker = "require_console_file();";
 
     expect(stripNextDevConsoleFileImport(stripNextDevConsoleFileImport(worker))).toBe(
-      "/* Removed Next dev console file hook for Cloudflare Workers. */",
+      "/* Removed Next dev console hook for Cloudflare Workers. */",
     );
   });
 });
