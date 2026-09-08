@@ -32,6 +32,14 @@ describe("Cloudflare worker production patch", () => {
     );
   });
 
+  it("rewrites raw Node fs and path imports for the Worker runtime", () => {
+    const worker = 'var fs=require("fs"),path=require("path");';
+
+    expect(stripNextDevConsoleFileImport(worker)).toBe(
+      'import * as __cloudflarePath from "node:path";\nconst __cloudflareFs = { existsSync: () => false, readFileSync: () => "", mkdirSync: () => {}, writeFileSync: () => {}, promises: { readFile: async () => "", writeFile: async () => {}, mkdir: async () => {}, stat: async () => ({}) } };\nvar fs=__cloudflareFs,path=__cloudflarePath;',
+    );
+  });
+
   it("is idempotent", () => {
     const worker = "require_console_file();";
 

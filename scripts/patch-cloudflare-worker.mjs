@@ -12,15 +12,33 @@ const consoleDimShim = "({ setAbortedLogsStyle() {} })";
 const nodeCryptoReplacement = "/* Removed Next Node crypto patch for Cloudflare Workers. */";
 const fastSetImmediateReplacement = "/* Removed Next fast setImmediate patch for Cloudflare Workers. */";
 const fastSetImmediateShim = "({ unpatchedSetImmediate: (callback) => setTimeout(callback, 0) });";
+const fsRequire = 'require("fs")';
+const pathRequire = 'require("path")';
+const cloudflareFs = "__cloudflareFs";
+const cloudflarePath = "__cloudflarePath";
+const cloudflareNodeImports =
+  'import * as __cloudflarePath from "node:path";\nconst __cloudflareFs = { existsSync: () => false, readFileSync: () => "", mkdirSync: () => {}, writeFileSync: () => {}, promises: { readFile: async () => "", writeFile: async () => {}, mkdir: async () => {}, stat: async () => ({}) } };\n';
 
 export function stripNextDevConsoleFileImport(worker) {
-  return worker
+  let patched = worker
     .replace(consoleFileHook, replacement)
     .replace(consoleDimHook, consoleDimReplacement)
     .replace(consoleDimImport, consoleDimShim)
     .replace(nodeCryptoHook, nodeCryptoReplacement)
     .replace(fastSetImmediateImport, fastSetImmediateReplacement)
     .replace(fastSetImmediateImport, fastSetImmediateShim);
+
+  if (patched.includes(fsRequire) || patched.includes(pathRequire)) {
+    patched = patched
+      .replaceAll(fsRequire, cloudflareFs)
+      .replaceAll(pathRequire, cloudflarePath);
+
+    if (!patched.startsWith(cloudflareNodeImports)) {
+      patched = `${cloudflareNodeImports}${patched}`;
+    }
+  }
+
+  return patched;
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
@@ -33,6 +51,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     consoleDimImport,
     nodeCryptoHook,
     fastSetImmediateImport,
+    fsRequire,
+    pathRequire,
   ].some((hook) => worker.includes(hook));
 
   if (!hasPatchTarget) {
