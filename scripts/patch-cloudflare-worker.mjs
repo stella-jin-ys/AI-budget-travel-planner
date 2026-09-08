@@ -14,6 +14,7 @@ const fastSetImmediateReplacement = "/* Removed Next fast setImmediate patch for
 const fastSetImmediateShim = "({ unpatchedSetImmediate: (callback) => setTimeout(callback, 0) });";
 const fsRequire = 'require("fs")';
 const pathRequire = 'require("path")';
+const nodePathRequire = 'require("node:path")';
 const osRequire = 'require("os")';
 const urlRequire = 'require("url")';
 const cryptoRequire = 'require("crypto")';
@@ -45,6 +46,7 @@ export function stripNextDevConsoleFileImport(worker) {
   if (
     patched.includes(fsRequire) ||
     patched.includes(pathRequire) ||
+    patched.includes(nodePathRequire) ||
     patched.includes(osRequire) ||
     patched.includes(urlRequire) ||
     patched.includes(cryptoRequire) ||
@@ -56,6 +58,7 @@ export function stripNextDevConsoleFileImport(worker) {
     patched = patched
       .replaceAll(fsRequire, cloudflareFs)
       .replaceAll(pathRequire, cloudflarePath)
+      .replaceAll(nodePathRequire, cloudflarePath)
       .replaceAll(osRequire, cloudflareOs)
       .replaceAll(urlRequire, cloudflareUrl)
       .replaceAll(cryptoRequire, cloudflareCrypto)
@@ -84,6 +87,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     fastSetImmediateImport,
     fsRequire,
     pathRequire,
+    nodePathRequire,
     osRequire,
     urlRequire,
     cryptoRequire,

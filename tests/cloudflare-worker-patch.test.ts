@@ -33,10 +33,10 @@ describe("Cloudflare worker production patch", () => {
   });
 
   it("rewrites raw Node fs and path imports for the Worker runtime", () => {
-    const worker = 'var fs=require("fs"),path=require("path"),os=require("os"),url=require("url"),crypto=require("crypto"),vm=require("vm"),stream=require("stream"),http=require("http"),https=require("https");';
+    const worker = 'var fs=require("fs"),path=require("path"),nodePath=require("node:path"),os=require("os"),url=require("url"),crypto=require("crypto"),vm=require("vm"),stream=require("stream"),http=require("http"),https=require("https");';
 
     expect(stripNextDevConsoleFileImport(worker)).toBe(
-      'import * as __cloudflarePath from "node:path";\nimport * as __cloudflareUrl from "node:url";\nimport * as __cloudflareCrypto from "node:crypto";\nimport * as __cloudflareStream from "node:stream";\nconst __cloudflareFs = { existsSync: () => false, readFileSync: () => "", mkdirSync: () => {}, writeFileSync: () => {}, promises: { readFile: async () => "", writeFile: async () => {}, mkdir: async () => {}, stat: async () => ({}) } };\nconst __cloudflareOs = { cpus: () => [{}] };\nconst __cloudflareVm = {};\nconst __cloudflareHttp = { Agent: class {} };\nconst __cloudflareHttps = { Agent: class {} };\nvar fs=__cloudflareFs,path=__cloudflarePath,os=__cloudflareOs,url=__cloudflareUrl,crypto=__cloudflareCrypto,vm=__cloudflareVm,stream=__cloudflareStream,http=__cloudflareHttp,https=__cloudflareHttps;',
+      'import * as __cloudflarePath from "node:path";\nimport * as __cloudflareUrl from "node:url";\nimport * as __cloudflareCrypto from "node:crypto";\nimport * as __cloudflareStream from "node:stream";\nconst __cloudflareFs = { existsSync: () => false, readFileSync: () => "", mkdirSync: () => {}, writeFileSync: () => {}, promises: { readFile: async () => "", writeFile: async () => {}, mkdir: async () => {}, stat: async () => ({}) } };\nconst __cloudflareOs = { cpus: () => [{}] };\nconst __cloudflareVm = {};\nconst __cloudflareHttp = { Agent: class {} };\nconst __cloudflareHttps = { Agent: class {} };\nvar fs=__cloudflareFs,path=__cloudflarePath,nodePath=__cloudflarePath,os=__cloudflareOs,url=__cloudflareUrl,crypto=__cloudflareCrypto,vm=__cloudflareVm,stream=__cloudflareStream,http=__cloudflareHttp,https=__cloudflareHttps;',
     );
   });
 
