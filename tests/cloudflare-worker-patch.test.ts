@@ -50,6 +50,9 @@ describe("Cloudflare worker production patch", () => {
     const patched = stripNextDevConsoleFileImport(worker);
 
     expect(patched).toContain('const __cloudflareStreamWeb = { ReadableStream };');
+    expect(patched).toContain(
+      "const __cloudflareBuffer = { Buffer: globalThis.Buffer, isUtf8: () => true, isAscii: () => true };",
+    );
     expect(patched).toContain('const require = __cloudflareNodeRequire;');
     expect(patched).toContain(
       'var fs=__cloudflareFs,path=__cloudflarePath,nodePath=__cloudflarePath,os=__cloudflareOs,url=__cloudflareUrl,crypto=__cloudflareCrypto,vm=__cloudflareVm,stream=__cloudflareStream,streamWeb=__cloudflareStreamWeb,http=__cloudflareHttp,https=__cloudflareHttps;',
