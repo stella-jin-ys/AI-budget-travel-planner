@@ -4,9 +4,12 @@ import { fileURLToPath } from "node:url";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = path.join(projectRoot, ".open-next");
+const distRoot = path.join(projectRoot, "dist");
 const destination = path.join(projectRoot, "dist", "server");
+const assetDestination = path.join(distRoot, "assets");
 
 fs.rmSync(destination, { recursive: true, force: true });
+fs.rmSync(assetDestination, { recursive: true, force: true });
 fs.mkdirSync(destination, { recursive: true });
 
 function copyTree(sourcePath, destinationPath) {
@@ -23,6 +26,10 @@ function copyTree(sourcePath, destinationPath) {
 }
 
 copyTree(source, destination);
+
+const stagedAssets = path.join(destination, "assets");
+if (!fs.existsSync(stagedAssets)) throw new Error("OpenNext assets were not generated.");
+fs.renameSync(stagedAssets, assetDestination);
 
 const worker = path.join(destination, "worker.js");
 const entrypoint = path.join(destination, "index.js");
