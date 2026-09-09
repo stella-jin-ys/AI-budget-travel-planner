@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
-    "build:cloudflare": "opennextjs-cloudflare build && node scripts/patch-cloudflare-worker.mjs",
+    "build:cloudflare": "opennextjs-cloudflare build && node scripts/patch-cloudflare-worker.mjs && node scripts/stage-cloudflare-dist.mjs",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
