@@ -40,10 +40,10 @@ describe("GuidedTripSetup", () => {
 
     const startDate = screen.getByLabelText("Start date");
     const endDate = screen.getByLabelText("End date");
-    fireEvent.change(startDate, { target: { value: "2026-09-10" } });
+    fireEvent.change(startDate, { target: { value: "2099-09-10" } });
 
-    expect(endDate).toHaveAttribute("min", "2026-09-10");
-    expect(endDate).toHaveValue("2026-09-10");
+    expect(endDate).toHaveAttribute("min", "2099-09-10");
+    expect(endDate).toHaveValue("2099-09-10");
   });
 
   it("removes a child and keeps the remaining child age", async () => {
@@ -89,7 +89,7 @@ describe("GuidedTripSetup", () => {
     expect(screen.getByRole("heading", { name: "Your trip, in the making." })).toBeVisible();
     expect(document.documentElement.scrollTop).toBe(0);
     expect(screen.getByText("Lund → France")).toBeVisible();
-    expect(screen.getByText("Spendwise will make one AI request and validate the result before building your plan.")).toBeVisible();
+    expect(screen.getByText("Spendwise will build a preview from your inputs while live AI planning is being connected.")).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Generate travel plan" }));
 
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({

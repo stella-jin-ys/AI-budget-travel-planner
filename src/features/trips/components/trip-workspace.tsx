@@ -9,7 +9,7 @@ export function TripWorkspace({ initialPlan, onEditBrief, navigation }: { initia
 
   return (
     <div className="workspace-with-nav">
-      <AppNav {...navigation} context="AI plan" />
+      <AppNav {...navigation} context={initialPlan.id.startsWith("preview-") ? "Preview plan" : "AI plan"} />
       <ManualShell
         state={state}
         leaf={<OverviewLeaf state={state} dispatch={dispatch} onEditBrief={onEditBrief} />}

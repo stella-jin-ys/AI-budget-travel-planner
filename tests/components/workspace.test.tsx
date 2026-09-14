@@ -160,14 +160,7 @@ describe("TripWorkspace", () => {
 
 describe("trip route", () => {
   async function fillGuidedBrief(user: ReturnType<typeof userEvent.setup>, origin: string, destination: string) {
-    const plan = buildSwitzerlandFamilyTrip();
-    plan.brief.origin = origin;
-    plan.brief.destination = destination;
-    plan.title = `${origin} to ${destination} travel plan`;
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ plan, retrievedAt: "2026-08-31T08:00:00.000Z", providerId: "openrouter-free" }),
-    }));
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("AI must not be called in preview mode")));
     await user.click(screen.getByRole("button", { name: "Start planning" }));
     const dialog = screen.getByRole("dialog", { name: "Sign in to Spendwise Trip" });
     await user.type(within(dialog).getByRole("textbox", { name: "Email" }), "traveller@example.com");
@@ -179,21 +172,18 @@ describe("trip route", () => {
     await user.click(screen.getByRole("button", { name: "Next: priorities" }));
     await user.click(screen.getByRole("button", { name: "Review trip" }));
     await user.click(screen.getByRole("button", { name: "Generate travel plan" }));
+    await screen.findByRole("main", { name: "Spendwise AI trip workspace" });
   }
 
-  it("opens the generated known-destination plan and keeps its AI context in navigation", async () => {
+  it("opens a personalized preview plan without calling the AI route", async () => {
     const user = userEvent.setup();
     render(<Home />);
 
     await fillGuidedBrief(user, "Basel", "Bernese Oberland");
 
     expect(await screen.findByRole("main", { name: "Spendwise AI trip workspace" })).toBeVisible();
-    expect(within(screen.getByRole("navigation", { name: "Primary navigation" })).getByText("AI plan")).toBeVisible();
-    expect(fetch).toHaveBeenCalledTimes(1);
-    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[0][1]?.body))).toEqual(expect.objectContaining({
-      origin: "Basel",
-      destination: "Bernese Oberland",
-    }));
+    expect(within(screen.getByRole("navigation", { name: "Primary navigation" })).getByText("Preview plan")).toBeVisible();
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("returns to the editable brief from the generated plan", async () => {

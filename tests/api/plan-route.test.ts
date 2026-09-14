@@ -106,6 +106,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   delete process.env.GEMINI_API_KEY;
   delete process.env.OPENROUTER_API_KEY;
+  delete process.env.OPENROUTER_MODEL;
   delete process.env.AI_PROVIDER;
   delete process.env.SUPABASE_URL;
   delete process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -142,6 +143,7 @@ describe("POST /api/plan", () => {
 
   it("makes one capability-filtered OpenRouter free-router request when Gemini is not configured", async () => {
     process.env.OPENROUTER_API_KEY = "openrouter-test-key";
+    process.env.OPENROUTER_MODEL = "meta-llama/llama-3.3-70b-instruct:free";
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
       status: 429,
@@ -156,7 +158,7 @@ describe("POST /api/plan", () => {
     expect(await response.json()).toEqual({ error: "AI model is overloaded. Try again later." });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(String(fetchMock.mock.calls[0][0])).toBe("https://openrouter.ai/api/v1/chat/completions");
-    expect(requestBody.model).toBe("openrouter/free");
+    expect(requestBody.model).toBe("meta-llama/llama-3.3-70b-instruct:free");
     expect(requestBody.max_tokens).toBe(4500);
     expect(requestBody.provider).toEqual({ require_parameters: true });
     expect(requestBody.response_format).toEqual({
@@ -177,10 +179,25 @@ describe("POST /api/plan", () => {
     });
   });
 
+  it("requires an explicit OpenRouter model instead of calling the invalid generic free slug", async () => {
+    process.env.OPENROUTER_API_KEY = "openrouter-test-key";
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await POST(tripRequest());
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      error: "OpenRouter planning is not configured. Set OPENROUTER_MODEL to a valid model slug.",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("uses configured OpenRouter as the single provider when Gemini is also configured", async () => {
     process.env.AI_PROVIDER = "openrouter";
     process.env.GEMINI_API_KEY = "gemini-test-key";
     process.env.OPENROUTER_API_KEY = "openrouter-test-key";
+    process.env.OPENROUTER_MODEL = "meta-llama/llama-3.3-70b-instruct:free";
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
       status: 429,
@@ -196,6 +213,7 @@ describe("POST /api/plan", () => {
 
   it("accepts the first complete plan when OpenRouter adds trailing text", async () => {
     process.env.OPENROUTER_API_KEY = "openrouter-test-key";
+    process.env.OPENROUTER_MODEL = "meta-llama/llama-3.3-70b-instruct:free";
     const plan = { ...groundedPlan(), title: "Lund to Paris {family} plan" };
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
@@ -217,6 +235,7 @@ describe("POST /api/plan", () => {
 
   it("retries malformed or empty OpenRouter content without parsing reasoning", async () => {
     process.env.OPENROUTER_API_KEY = "openrouter-test-key";
+    process.env.OPENROUTER_MODEL = "meta-llama/llama-3.3-70b-instruct:free";
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({
         ok: true,
@@ -238,6 +257,7 @@ describe("POST /api/plan", () => {
 
   it("does not heuristically repair malformed OpenRouter JSON", async () => {
     process.env.OPENROUTER_API_KEY = "openrouter-test-key";
+    process.env.OPENROUTER_MODEL = "meta-llama/llama-3.3-70b-instruct:free";
     const malformedPlan = `${JSON.stringify(groundedPlan()).slice(0, -1)},}`;
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({

@@ -11,7 +11,7 @@ export function LaunchScreen({ onStart, onDemo, navigation }: { onStart: () => v
         <p>Tell us where you’re starting, who’s coming, and what matters most.</p>
         <button type="button" className="launch-cta" onClick={onStart}>Start planning <span aria-hidden="true">↗</span></button>
         {onDemo ? <button type="button" className="launch-cta launch-demo" onClick={onDemo}>View demo trip <span aria-hidden="true">↗</span></button> : null}
-        <p className="launch-card__note">One request · Your brief stays saved</p>
+        <p className="launch-card__note">Your brief · A personalized preview instantly</p>
       </section>
       <ol className="launch-steps" aria-label="How it works">
         <li><span>01</span><strong>Set the brief</strong><small>Origin, dates & budget</small></li>

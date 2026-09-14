@@ -2,7 +2,6 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import Home from "@/app/page";
-import { buildSwitzerlandFamilyTrip } from "@/features/trips/fixtures/switzerland-family";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -99,16 +98,9 @@ describe("planner access", () => {
     expect(screen.getByRole("heading", { name: "Where to?" })).toBeVisible();
   });
 
-  it("opens the reviewed trip after one AI request", async () => {
+  it("opens the reviewed preview without calling the AI provider", async () => {
     const user = userEvent.setup();
-    const plan = buildSwitzerlandFamilyTrip();
-    plan.brief.origin = "Lund";
-    plan.brief.destination = "France";
-    plan.title = "Lund to France travel plan";
-    const fetchSpy = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ plan, retrievedAt: "2026-08-31T08:00:00.000Z", providerId: "openrouter-free" }),
-    });
+    const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
     render(<Home />);
 
@@ -119,26 +111,8 @@ describe("planner access", () => {
     await user.click(screen.getByRole("button", { name: "Generate travel plan" }));
 
     expect(await screen.findByRole("main", { name: "Spendwise AI trip workspace" })).toBeVisible();
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(within(screen.getByRole("navigation", { name: "Primary navigation" })).getByText("AI plan")).toBeVisible();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(within(screen.getByRole("navigation", { name: "Primary navigation" })).getByText("Preview plan")).toBeVisible();
     expect(screen.getByRole("navigation", { name: "Primary navigation" })).toBeVisible();
-  });
-
-  it("shows the overload state when the single AI request is unavailable", async () => {
-    const user = userEvent.setup();
-    const fetchSpy = vi.fn().mockResolvedValue({
-      ok: false,
-      json: async () => ({ error: "AI model is overloaded. Try again later." }),
-    });
-    vi.stubGlobal("fetch", fetchSpy);
-    render(<Home />);
-
-    await signIn(user);
-    await reachReview(user);
-    await user.click(screen.getByRole("button", { name: "Generate travel plan" }));
-
-    expect(await screen.findByRole("main", { name: "AI travel plan unavailable" })).toBeVisible();
-    expect(screen.getByRole("heading", { name: "AI model is overloaded. Try again later." })).toBeVisible();
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 });

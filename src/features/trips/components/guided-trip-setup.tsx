@@ -120,7 +120,7 @@ export function GuidedTripSetup({ onSubmit, busy = false, navigation, initialSte
 
         {step === 3 ? <Page title="Your trip, in the making." copy="Review your choices before opening the saved travel plan.">
           <dl className="trip-review"><div><dt>Destination</dt><dd>{origin} → {destination || "Flexible destination"}</dd></div><div><dt>Dates</dt><dd>{startDate} – {endDate}</dd></div><div><dt>Travelers</dt><dd>{adults} adult{adults === 1 ? "" : "s"}{childAges.length ? ` · ${childAges.length} child` : ""}</dd></div><div><dt>Budget</dt><dd>{budget ? `${Number(budget).toLocaleString("sv-SE")} ${currency}` : "Flexible"}</dd></div><div><dt>Priority</dt><dd>{priority === "balanced" ? "Balanced spending" : priority[0].toUpperCase() + priority.slice(1)}</dd></div></dl>
-          <p className="guided-demo-note">Spendwise will make one AI request and validate the result before building your plan.</p>
+          <p className="guided-demo-note">Spendwise will build a preview from your inputs while live AI planning is being connected.</p>
         </Page> : null}
 
         <div className="guided-actions">

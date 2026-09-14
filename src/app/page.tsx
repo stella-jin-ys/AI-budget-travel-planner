@@ -7,8 +7,8 @@ import { TripWorkspace } from "@/features/trips/components/trip-workspace";
 import { AuthDialog } from "@/features/trips/components/auth-dialog";
 import { AIPlanError } from "@/features/trips/components/ai-plan-error";
 import type { TripBrief, TripPlan } from "@/features/trips/domain/trip";
-import { AITripProvider } from "@/features/trips/providers/ai-provider";
 import { buildSwitzerlandFamilyTrip } from "@/features/trips/fixtures/switzerland-family";
+import { buildSimulatedTrip } from "@/features/trips/fixtures/simulated-trip";
 
 export default function Home() {
   const [plan, setPlan] = useState<TripPlan | undefined>();
@@ -35,8 +35,8 @@ export default function Home() {
 
     setBusy(true);
     try {
-      const result = await new AITripProvider().search(brief);
-      setPlan(result.plan);
+      await new Promise((resolve) => window.setTimeout(resolve, 350));
+      setPlan(buildSimulatedTrip(brief));
     } catch (error) {
       setError(error instanceof Error ? error.message : "AI model is overloaded. Try again later.");
     } finally {

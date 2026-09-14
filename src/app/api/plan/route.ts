@@ -7,7 +7,6 @@ import { persistTripPlan } from "@/lib/supabase/persistence";
 
 export const maxDuration = 300;
 
-const openRouterModel = process.env.OPENROUTER_MODEL ?? "openrouter/free";
 const geminiModel = process.env.GEMINI_MODEL ?? "gemini-3.7-flash";
 const moneySchema = z.object({ amount: z.string().regex(/^\d+(?:\.\d{1,2})?$/), currency: z.string().length(3) });
 const evidenceSchema = z.object({ status: z.enum(["live", "recent", "typical", "stale", "unavailable"]), supplierName: z.string(), checkedAt: z.string(), sourceUrl: z.string().url().optional(), reason: z.string().optional(), synthetic: z.literal(false) });
@@ -151,6 +150,7 @@ function validateSourceReferences(plan: TripPlan, snapshot: TripSourceSnapshot) 
 export async function POST(request: Request) {
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const openRouterApiKey = process.env.OPENROUTER_API_KEY;
+  const openRouterModel = process.env.OPENROUTER_MODEL?.trim();
   if (!geminiApiKey && !openRouterApiKey) return NextResponse.json({ error: "AI planning is not configured. Add GEMINI_API_KEY or OPENROUTER_API_KEY to the server environment." }, { status: 503 });
 
   let brief: TripBrief;
@@ -174,8 +174,12 @@ export async function POST(request: Request) {
   }
 
   const preferOpenRouter = process.env.AI_PROVIDER === "openrouter";
-  const provider = openRouterApiKey && (preferOpenRouter || !geminiApiKey)
-    ? { id: "openrouter" as const, model: openRouterModel, apiKey: openRouterApiKey }
+  const useOpenRouter = Boolean(openRouterApiKey && (preferOpenRouter || !geminiApiKey));
+  if (useOpenRouter && !openRouterModel) {
+    return NextResponse.json({ error: "OpenRouter planning is not configured. Set OPENROUTER_MODEL to a valid model slug." }, { status: 503 });
+  }
+  const provider = useOpenRouter
+    ? { id: "openrouter" as const, model: openRouterModel!, apiKey: openRouterApiKey! }
     : { id: "gemini" as const, model: geminiModel, apiKey: geminiApiKey! };
   const isGemini = provider.id === "gemini";
 
